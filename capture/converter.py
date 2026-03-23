@@ -69,7 +69,11 @@ def infer_fps(timestamps: list[float], fallback_fps: float) -> float:
     if not deltas:
         return fallback_fps
 
-    inferred = 1.0 / median(deltas)
+    median_delta = median(deltas)
+    if median_delta <= 0:
+        return fallback_fps
+
+    inferred = 1.0 / median_delta
     return inferred if inferred > 0 else fallback_fps
 
 
@@ -174,7 +178,7 @@ def main():
 
     for stream_name in args.streams:
         result = convert_stream(take_dir, stream_name, overwrite=args.overwrite)
-        note = " (used shared frame count due to raw/csv mismatch)" if result.truncated else ""
+        note = " (frame count limited by shorter of raw file and frames.csv)" if result.truncated else ""
         print(
             f"{result.stream}: wrote {result.frames_written} frames to {result.output_path} "
             f"at {result.fps:.2f} fps ({result.width}x{result.height}){note}"
