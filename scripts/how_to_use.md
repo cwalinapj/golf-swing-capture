@@ -9,6 +9,7 @@ source scripts/export_take_env.sh
 scripts/record.sh
 
 That gives you a nice GitHub-friendly pattern:
+	
 	•	setup.sh installs everything
 	•	export_take_env.sh holds your field defaults
 	•	record.sh is your one-command launch
