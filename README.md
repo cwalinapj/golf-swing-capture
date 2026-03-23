@@ -62,6 +62,29 @@ Notes
 	•	frames.csv contains per-frame timestamps and sequence numbers
 	•	manifest.json stores take-level metadata
 
+## Convert RAW to MP4
+
+After a take is recorded, convert the mono raw files into usable videos:
+
+```bash
+scripts/convert.sh /path/to/golf_takes/swing_YYYYMMDD_HHMMSS_mmm
+```
+
+That writes:
+
+```text
+left.mp4
+right.mp4
+```
+
+You can also call the converter directly:
+
+```bash
+python -m capture.converter /path/to/golf_takes/swing_YYYYMMDD_HHMMSS_mmm
+```
+
+Use `--overwrite` to replace existing mp4 files, or `--streams left` / `--streams right` to convert only one side.
+
 ---
 
 ## `requirements.txt`
