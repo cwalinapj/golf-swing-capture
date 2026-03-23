@@ -16,3 +16,8 @@ That gives you a nice GitHub-friendly pattern:
 	•	run.sh is the underlying runner
 
 A good next addition would be a scripts/run_roof.sh once you want the roof camera launched alongside the impact rig.
+
+
+python scripts/run_pipeline.py \
+  --input /Volumes/Torrents/golf_takes \
+  --output ./processed

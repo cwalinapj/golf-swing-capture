@@ -1,0 +1,13 @@
+{
+  "swing_id": 42,
+  "videos": {
+    "roof": "swing_042/roof.mp4",
+    "left": "swing_042/left.mp4",
+    "right": "swing_042/right.mp4"
+  },
+  "labels": {
+    "ball_speed": 152.3,
+    "launch_angle": 13.2,
+    "spin_rate": 2450
+  }
+}

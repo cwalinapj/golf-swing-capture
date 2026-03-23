@@ -62,6 +62,34 @@ Notes
 	•	frames.csv contains per-frame timestamps and sequence numbers
 	•	manifest.json stores take-level metadata
 
+## Extract a swing clip
+
+If you already know the impact frame index, you can trim a take down to a swing-only clip.
+
+This uses the impact stream timestamps to define the clip window, then keeps every frame from
+each stream whose timestamp falls inside that same window. That keeps the mono streams and the
+lower-FPS RGB stream aligned.
+
+```bash
+python scripts/extract_swing_clip.py \
+  --take-dir /path/to/golf_takes/swing_20260323_102843_971 \
+  --impact-frame-index 120 \
+  --impact-stream left \
+  --padding-frames 20
+```
+
+By default this creates a sibling folder named like:
+
+```text
+/path/to/golf_takes/swing_20260323_102843_971_clip_left_000120/
+```
+
+The extracted folder contains:
+
+- trimmed `left.raw8`, `right.raw8`, and optional `rgb.rawbgr`
+- a filtered `frames.csv`
+- a `manifest.json` with the source take, impact frame, timestamp window, and per-stream ranges
+
 ---
 
 ## Pipeline
