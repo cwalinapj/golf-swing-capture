@@ -1,0 +1,40 @@
+def detect_swings_roof(video_path):
+    cap = cv2.VideoCapture(video_path)
+
+    prev = None
+    motion_scores = []
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(float)
+
+        if prev is not None:
+            diff = np.abs(gray - prev)
+            score = np.sum(diff)
+        else:
+            score = 0
+
+        motion_scores.append(score)
+        prev = gray
+
+    cap.release()
+
+    # Smooth signal
+    motion_scores = np.array(motion_scores)
+
+    threshold = np.mean(motion_scores) + 2 * np.std(motion_scores)
+
+    swings = []
+    active = False
+
+    for i, val in enumerate(motion_scores):
+        if val > threshold and not active:
+            swings.append(i)
+            active = True
+        elif val < threshold:
+            active = False
+
+    return swings

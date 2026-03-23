@@ -62,28 +62,33 @@ Notes
 	•	frames.csv contains per-frame timestamps and sequence numbers
 	•	manifest.json stores take-level metadata
 
-## Convert RAW to MP4
+## Extract a swing clip
 
-After a take is recorded, convert the mono raw files into usable videos:
+If you already know the impact frame index, you can trim a take down to a swing-only clip.
+
+This uses the impact stream timestamps to define the clip window, then keeps every frame from
+each stream whose timestamp falls inside that same window. That keeps the mono streams and the
+lower-FPS RGB stream aligned.
 
 ```bash
-scripts/convert.sh /path/to/golf_takes/swing_YYYYMMDD_HHMMSS_mmm
+python scripts/extract_swing_clip.py \
+  --take-dir /path/to/golf_takes/swing_20260323_102843_971 \
+  --impact-frame-index 120 \
+  --impact-stream left \
+  --padding-frames 20
 ```
 
-That writes:
+By default this creates a sibling folder named like:
 
 ```text
-left.mp4
-right.mp4
+/path/to/golf_takes/swing_20260323_102843_971_clip_left_000120/
 ```
 
-You can also call the converter directly:
+The extracted folder contains:
 
-```bash
-python -m capture.converter /path/to/golf_takes/swing_YYYYMMDD_HHMMSS_mmm
-```
-
-Use `--overwrite` to replace existing mp4 files, or `--streams left` / `--streams right` to convert only one side.
+- trimmed `left.raw8`, `right.raw8`, and optional `rgb.rawbgr`
+- a filtered `frames.csv`
+- a `manifest.json` with the source take, impact frame, timestamp window, and per-stream ranges
 
 ---
 
