@@ -1,120 +1,82 @@
-"""Flask web interface for the golf swing capture application."""
+import queue
+from dataclasses import asdict
 
-import time
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 
-from flask import Flask, Response, jsonify, render_template_string
+from .recorder import ImpactRecorder
 
-from capture.config import Config
-from capture.recorder import GolfSwingRecorder
 
-# ---------------------------------------------------------------------------
-# HTML template (inline so no separate templates/ directory is required)
-# ---------------------------------------------------------------------------
-_INDEX_HTML = """<!DOCTYPE html>
-<html lang="en">
+def make_app(recorder: ImpactRecorder):
+    app = FastAPI()
+
+    @app.get("/", response_class=HTMLResponse)
+    def index():
+        return """
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Golf Swing Capture</title>
+  <meta charset="utf-8">
+  <title>Swing Capture</title>
   <style>
-    body { font-family: sans-serif; background: #1a1a2e; color: #eee;
-           display: flex; flex-direction: column; align-items: center;
-           padding: 2rem; margin: 0; }
-    h1   { color: #e94560; margin-bottom: 1rem; }
-    img  { border: 3px solid #e94560; border-radius: 8px; max-width: 100%; }
-    .controls { display: flex; gap: 1rem; margin-top: 1.5rem; }
-    button { padding: .6rem 1.8rem; border: none; border-radius: 6px;
-             font-size: 1rem; cursor: pointer; transition: opacity .2s; }
-    button:hover { opacity: .85; }
-    #btnStart { background: #4caf50; color: #fff; }
-    #btnStop  { background: #e94560; color: #fff; }
-    #status   { margin-top: 1rem; font-size: .95rem; min-height: 1.4em; }
+    body { font-family: sans-serif; margin: 24px; max-width: 900px; }
+    button { font-size: 18px; padding: 12px 20px; margin-right: 10px; }
+    pre { background: #111; color: #0f0; padding: 12px; border-radius: 8px; min-height: 200px; }
   </style>
 </head>
 <body>
-  <h1>⛳ Golf Swing Capture</h1>
-  <img id="feed" src="/video_feed" alt="Live camera feed" />
-  <div class="controls">
-    <button id="btnStart" onclick="startRec()">▶ Start Recording</button>
-    <button id="btnStop"  onclick="stopRec()">■ Stop Recording</button>
-  </div>
-  <p id="status"></p>
+  <h2>Swing Capture Control</h2>
+  <p>
+    <button onclick="startRec()">Start Recording</button>
+    <button onclick="stopRec()">Stop Recording</button>
+  </p>
+  <pre id="status">loading...</pre>
   <script>
     async function startRec() {
-      const r = await fetch('/start', { method: 'POST' });
-      const d = await r.json();
-      document.getElementById('status').textContent =
-        d.error ? 'Error: ' + d.error : 'Recording → ' + d.file;
+      await fetch('/start', {method:'POST'});
+      await refresh();
     }
     async function stopRec() {
-      const r = await fetch('/stop', { method: 'POST' });
-      const d = await r.json();
-      document.getElementById('status').textContent =
-        d.error ? 'Error: ' + d.error : 'Saved: ' + d.file;
+      await fetch('/stop', {method:'POST'});
+      await refresh();
     }
+    async function refresh() {
+      const r = await fetch('/status');
+      const j = await r.json();
+      document.getElementById('status').textContent = JSON.stringify(j, null, 2);
+    }
+    refresh();
+    setInterval(refresh, 1000);
   </script>
 </body>
 </html>
-"""
+        """
 
+    @app.get("/status")
+    def status():
+        events = []
+        try:
+            while True:
+                events.append(recorder.event_log.get_nowait())
+        except queue.Empty:
+            pass
 
-def _mjpeg_stream(recorder: GolfSwingRecorder):
-    """Generator that yields MJPEG frames from the recorder."""
-    while True:
-        frame = recorder.get_frame()
-        if frame is None:
-            time.sleep(1.0 / (recorder._config.FPS or 30))
-            continue
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
-        )
+        return {
+            "recording": recorder.recording,
+            "status": recorder.status_text,
+            "current_take": None if recorder.current_take is None else asdict(recorder.current_take),
+            "last_error": recorder.last_error,
+            "new_events": events,
+        }
 
+    @app.post("/start")
+    def start():
+        ok, msg = recorder.start_recording()
+        return JSONResponse({"ok": ok, "message": msg})
 
-def create_app(config: Config | None = None) -> Flask:
-    """Create and configure the Flask application."""
-    cfg = config or Config()
-    recorder = GolfSwingRecorder(cfg)
-    recorder.open()
-
-    app = Flask(__name__)
-
-    @app.route("/")
-    def index():
-        return render_template_string(_INDEX_HTML)
-
-    @app.route("/video_feed")
-    def video_feed():
-        return Response(
-            _mjpeg_stream(recorder),
-            mimetype="multipart/x-mixed-replace; boundary=frame",
-        )
-
-    @app.route("/start", methods=["POST"])
-    def start_recording():
-        filepath = recorder.start_recording()
-        if filepath is None:
-            return jsonify({"error": "Camera not available or already recording"}), 400
-        return jsonify({"status": "recording", "file": filepath})
-
-    @app.route("/stop", methods=["POST"])
-    def stop_recording():
-        filepath = recorder.stop_recording()
-        if filepath is None:
-            return jsonify({"error": "Not currently recording"}), 400
-        return jsonify({"status": "stopped", "file": filepath})
-
-    @app.route("/status")
-    def recording_status():
-        return jsonify(
-            {
-                "is_recording": recorder.is_recording,
-                "current_file": recorder.current_file,
-            }
-        )
-
-    @app.teardown_appcontext
-    def shutdown(_exc):
-        recorder.close()
+    @app.post("/stop")
+    def stop():
+        ok, msg = recorder.stop_recording()
+        return JSONResponse({"ok": ok, "message": msg})
 
     return app
