@@ -1,1 +1,1 @@
-__all__ = ["config", "recorder", "web"]
+__all__ = ["config", "recorder", "swing_clip", "web"]
