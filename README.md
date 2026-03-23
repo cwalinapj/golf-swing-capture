@@ -64,6 +64,25 @@ Notes
 
 ---
 
+## Pipeline
+
+Post-process a recorded take with:
+
+```bash
+python pipeline/split_raw_to_video.py /path/to/swing_YYYYMMDD_HHMMSS_mmm
+python pipeline/detect_impact.py /path/to/swing_YYYYMMDD_HHMMSS_mmm
+python pipeline/build_swing_json.py /path/to/swing_YYYYMMDD_HHMMSS_mmm
+```
+
+This produces:
+
+- `left.mp4`, `right.mp4`, and `rgb.mp4` when those streams exist
+- `video_assets.json` describing generated videos
+- `impact.json` with the strongest mono-frame change candidate
+- `swing.json` combining the take manifest, generated assets, and impact result
+
+---
+
 ## `requirements.txt`
 
 ```txt
